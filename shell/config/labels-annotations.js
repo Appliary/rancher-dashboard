@@ -24,6 +24,8 @@ export const KUBERNETES = {
 
 export const CERTMANAGER = { ISSUER: 'cert-manager.io/issuer-name' };
 
+export const REFLECTOR = { ISSUER: 'reflector.v1.k8s.emberstack.com/reflects' };
+
 export const STORAGE = {
   DEFAULT_STORAGE_CLASS:      'storageclass.kubernetes.io/is-default-class',
   BETA_DEFAULT_STORAGE_CLASS: 'storageclass.beta.kubernetes.io/is-default-class'

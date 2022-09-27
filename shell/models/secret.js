@@ -1,5 +1,5 @@
 import r from 'jsrsasign';
-import { CERTMANAGER, KUBERNETES } from '@shell/config/labels-annotations';
+import { CERTMANAGER, KUBERNETES, REFLECTOR } from '@shell/config/labels-annotations';
 import { base64Decode, base64Encode } from '@shell/utils/crypto';
 import { removeObjects } from '@shell/utils/array';
 import { SERVICE_ACCOUNT } from '@shell/config/types';
@@ -119,6 +119,30 @@ export default class Secret extends SteveModel {
       }
     }
 
+    let reflect = this.metadata?.annotations?.[REFLECTOR.ISSUER];
+
+    if (reflect) {
+      reflect = reflect.split('/');
+
+      out.push({
+        label:         'Reflector',
+        content:       `${ reflect[0] } / ${ reflect[1] }`,
+        formatter:     'Link',
+        formatterOpts: {
+          options: { internal: true },
+          to:      {
+            name:   'c-cluster-product-resource-namespace-id',
+            params: {
+              resource:  'secret',
+              namespace: reflect[0],
+              id:        reflect[1],
+              product:   'explorer'
+            }
+          },
+        },
+      });
+    }
+
     if (this.cn) {
       out.push({
         label:   this.t('secret.certificate.cn'),
@@ -150,6 +174,10 @@ export default class Secret extends SteveModel {
       return false;
     }
 
+    if ( this.metadata?.annotations?.[REFLECTOR.ISSUER] ) {
+      return false;
+    }
+
     if ( this._type === TYPES.SERVICE_ACCT ) {
       return false;
     }
@@ -176,7 +204,11 @@ export default class Secret extends SteveModel {
 
   // decode some secret data to show in list view
   get dataPreview() {
-    if (this._type === TYPES.DOCKER_JSON) {
+    const { metadata:{ annotations = {} } } = this;
+
+    if (annotations[REFLECTOR.ISSUER]) {
+      return `Reflection of "${ annotations[REFLECTOR.ISSUER] }"`;
+    } else if (this._type === TYPES.DOCKER_JSON) {
       const encodedJSON = this.data['.dockerconfigjson'];
 
       if (encodedJSON) {
@@ -202,7 +234,7 @@ export default class Secret extends SteveModel {
     } else if ( this._type === TYPES.SSH ) {
       return this.sshUser;
     } else if ( this._type === TYPES.SERVICE_ACCT ) {
-      return this.metadata?.annotations?.['kubernetes.io/service-account.name'];
+      return annotations['kubernetes.io/service-account.name'];
     }
 
     return this.keysDisplay;
